@@ -4,9 +4,13 @@
   "description": "Upload pdf files",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "elm-land server"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "elm-land": "^0.18.3",
+    "idb": "^8.0.0"
+  }
 }

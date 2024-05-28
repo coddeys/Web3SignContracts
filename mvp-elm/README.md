@@ -13,11 +13,11 @@ To get started, we'll need to install the latest version of Elm Land from NPM.
 
 ```
 npm i
-npm install -g elm-land@latest
 ```
 
 ### Run the development server
 
 ```
-elm-land server
+npm run server
 ```
+
