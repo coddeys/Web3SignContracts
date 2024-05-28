@@ -1,4 +1,4 @@
-import { getAll, upload } from "./js/store.js";
+import { initDB, getAll, upload } from "./js/store.js";
 // This is called BEFORE your Elm app starts up
 //
 // The value returned here will be passed as flags
@@ -15,6 +15,7 @@ export const flags = ({ env }) => {
 // to your Elm application, or subscribe to incoming
 // messages from Elm
 export const onReady = ({ app, env }) => {
+  initDB();
   if (app.ports && app.ports.outgoing) {
     app.ports.outgoing.subscribe(({ tag, data }) => {
       switch (tag) {
@@ -25,14 +26,22 @@ export const onReady = ({ app, env }) => {
           upload(data);
           return;
         case "SYNC":
-          let x;
-          x = getAll();
-          console.log(x);
+          sync();
           return;
         default:
           console.warn(`Unhandled outgoing port: "${tag}"`);
           return;
       }
+    });
+  }
+
+  async function sync() {
+    const docs = await getAll();
+    console.log(docs);
+
+    app.ports.incoming.send({
+      tag: "GOT_DOCS",
+      data: { docs: docs.map((x) => x.file) },
     });
   }
 

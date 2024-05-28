@@ -14,6 +14,7 @@ module Shared exposing
 
 import Dict
 import Effect exposing (Effect)
+import FileValue exposing (File)
 import Json.Decode
 import Route exposing (Route)
 import Route.Path
@@ -46,8 +47,10 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { accounts = [] }
-    , Effect.none
+    ( { accounts = []
+      , docs = []
+      }
+    , Effect.syncOut
     )
 
 
@@ -78,6 +81,11 @@ update route msg model =
                 , query = Dict.empty
                 , hash = Nothing
                 }
+            )
+
+        Shared.Msg.SyncIn { docs } ->
+            ( { model | docs = docs }
+            , Effect.none
             )
 
 

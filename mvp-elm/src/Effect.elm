@@ -4,8 +4,8 @@ port module Effect exposing
     , sendCmd, sendMsg
     , pushRoute, replaceRoute, loadExternalUrl
     , map, toCmd
-    , login, upload, sync
-    , incoming, signIn, signOut
+    , login, upload
+    , incoming, signIn, signOut, syncIn, syncOut
     )
 
 {-|
@@ -75,8 +75,8 @@ upload file =
         }
 
 
-sync : Effect msg
-sync =
+syncOut : Effect msg
+syncOut =
     SendMessageToJavaScript
         { tag = "SYNC"
         , data = Json.Encode.null
@@ -95,6 +95,11 @@ signIn options =
 signOut : Effect msg
 signOut =
     SendSharedMsg Shared.Msg.SignOut
+
+
+syncIn : { docs : List File } -> Effect msg
+syncIn options =
+    SendSharedMsg (Shared.Msg.SyncIn options)
 
 
 

@@ -1,6 +1,7 @@
 module Layouts.Default exposing (Model, Msg, Settings, layout)
 
 import Effect exposing (Effect)
+import FileValue exposing (File)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -57,6 +58,11 @@ metaMaskAccountDecoder =
     Json.Decode.field "accounts" (Json.Decode.list Json.Decode.string)
 
 
+docsDecoder : Json.Decode.Decoder (List File)
+docsDecoder =
+    Json.Decode.field "docs" (Json.Decode.list FileValue.decoder)
+
+
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
@@ -67,6 +73,18 @@ update msg model =
                         Ok accounts ->
                             ( model
                             , Effect.signIn { accounts = accounts }
+                            )
+
+                        Err err ->
+                            ( model
+                            , Effect.none
+                            )
+
+                "GOT_DOCS" ->
+                    case Debug.log "result" <| Json.Decode.decodeValue docsDecoder data of
+                        Ok docs ->
+                            ( model
+                            , Effect.syncIn { docs = docs }
                             )
 
                         Err err ->
