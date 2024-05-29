@@ -2,6 +2,9 @@ module Pages.Docs exposing (Model, Msg, page)
 
 import Auth
 import Bytes exposing (Bytes)
+import Data.Doc as Doc exposing (Doc)
+import Data.EncryptionKey as EncryptionKey exposing (EncryptionKey)
+import Data.Sign as Sign exposing (Sign)
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import File
@@ -14,14 +17,17 @@ import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Encode
 import Layouts
+import List.Extra as List
+import Maybe.Extra as Maybe
 import Page exposing (Page)
 import Route exposing (Route)
 import Set exposing (Set)
 import Shared
-import Shared.Model exposing (Doc, Docs)
+import Shared.Model exposing (Docs)
 import Task
 import Time
 import View exposing (View)
+import Views.Action.Button as ActionButton exposing (ActionButton)
 
 
 page : Auth.User -> Shared.Model -> Route () -> Page Model Msg
@@ -54,6 +60,8 @@ type alias Model =
     , sorted : Maybe ( Column, Bool )
     , selected : Set Int
     , signed : Set Int
+    , encrypted : Set Int
+    , uplodedToIPFS : Set Int
     }
 
 
@@ -61,6 +69,8 @@ type Column
     = SelectedCol
     | Name
     | Signed
+    | Encrypted
+    | UploadedToIPFS
     | Size
     | Modified
 
@@ -70,6 +80,8 @@ allColumns =
     [ SelectedCol
     , Name
     , Signed
+    , Encrypted
+    , UploadedToIPFS
     , Size
     , Modified
     ]
@@ -86,6 +98,12 @@ isSorted col =
 
         Signed ->
             False
+
+        Encrypted ->
+            True
+
+        UploadedToIPFS ->
+            True
 
         Size ->
             True
@@ -106,6 +124,12 @@ colToString col =
         Signed ->
             "Signed"
 
+        Encrypted ->
+            "Encrypted"
+
+        UploadedToIPFS ->
+            "IPFS"
+
         Size ->
             "Size"
 
@@ -119,6 +143,8 @@ init () =
       , sorted = Nothing
       , selected = Set.empty
       , signed = Set.empty
+      , encrypted = Set.empty
+      , uplodedToIPFS = Set.empty
       }
     , Effect.none
     )
@@ -135,11 +161,11 @@ type Msg
     | PreviewClicked Doc
     | PreviewClosed
     | DeleteClicked (Set Int)
-    | DownloadClicked (Set Int)
-    | DownloadLoaded String Bytes
     | SignClicked (Set Int)
     | SetSorted ( Column, Bool )
     | SetSelected Int
+    | EncryptClicked (Set Int)
+    | UploadedToIPFSClicked (Set Int)
 
 
 update : Docs -> Msg -> Model -> ( Model, Effect Msg )
@@ -162,16 +188,18 @@ update docs msg model =
 
         PreviewClicked doc ->
             ( model
-            , doc.file.value
-                |> Json.Decode.decodeValue File.decoder
-                |> Result.map
+              -- TODO: Preview IPFS file
+            , Doc.file doc
+                |> Maybe.map .value
+                |> Maybe.andThen (Result.toMaybe << Json.Decode.decodeValue File.decoder)
+                |> Maybe.map
                     (\x ->
                         x
                             |> File.toUrl
                             |> Task.perform UrlGen
                             |> Effect.sendCmd
                     )
-                |> Result.withDefault Effect.none
+                |> Maybe.withDefault Effect.none
             )
 
         PreviewClosed ->
@@ -187,16 +215,6 @@ update docs msg model =
                 |> Effect.batch
             )
 
-        DownloadClicked set ->
-            ( model
-            , set
-                |> Set.toList
-                |> List.filterMap (\k -> Dict.get k docs)
-                |> List.filterMap downloadTask
-                |> List.map Effect.sendCmd
-                |> Effect.batch
-            )
-
         SignClicked set ->
             ( { model
                 | selected = Set.empty
@@ -208,11 +226,26 @@ update docs msg model =
                 |> Effect.batch
             )
 
-        DownloadLoaded name bytes ->
-            ( model
-            , bytes
-                |> File.Download.bytes name "application/pdf"
-                |> Effect.sendCmd
+        EncryptClicked set ->
+            ( { model
+                | selected = Set.empty
+                , encrypted = Set.union set model.encrypted
+              }
+            , set
+                |> Set.toList
+                |> List.map Effect.encrypt
+                |> Effect.batch
+            )
+
+        UploadedToIPFSClicked set ->
+            ( { model
+                | selected = Set.empty
+                , uplodedToIPFS = Set.union set model.uplodedToIPFS
+              }
+            , set
+                |> Set.toList
+                |> List.map Effect.uploadToIPFS
+                |> Effect.batch
             )
 
         SetSorted ( col, bool ) ->
@@ -231,16 +264,6 @@ update docs msg model =
               }
             , Effect.none
             )
-
-
-downloadTask : Doc -> Maybe (Cmd Msg)
-downloadTask doc =
-    let
-        toBytes =
-            Maybe.map File.toBytes << Result.toMaybe << Json.Decode.decodeValue File.decoder
-    in
-    toBytes doc.file.value
-        |> Maybe.map (Task.perform <| DownloadLoaded doc.file.name)
 
 
 
@@ -275,11 +298,11 @@ sortBy sorted xs =
         Just ( col, bool ) ->
             if bool then
                 xs
-                    |> List.sortBy (.name << .file << Tuple.second)
+                    |> List.sortBy (Doc.name << Tuple.second)
                     |> List.reverse
 
             else
-                List.sortBy (.name << .file << Tuple.second) xs
+                List.sortBy (Doc.name << Tuple.second) xs
 
         Nothing ->
             xs
@@ -292,31 +315,124 @@ viewHeader model docs =
         , style "justify-content" "space-between"
         ]
         [ div [] [ h1 [] [ Html.text <| "All Docs(" ++ String.fromInt (Dict.size docs) ++ ")" ] ]
-        , div [ style "display" "flex", style "height" "100%" ] (viewActions model docs)
-        ]
-
-
-viewActions : Model -> Docs -> List (Html Msg)
-viewActions model docs =
-    let
-        alreadySigned =
-            model.selected
-                |> Set.toList
-                |> List.filterMap (\k -> Dict.get k docs)
-                |> List.any (\d -> d.signed)
-    in
-    if Set.isEmpty model.selected then
-        [ div []
-            [ hiddenInputSingle "upload" [ "application/pdf" ] PdfLoaded
-            , label [ for "upload", attribute "role" "button" ] [ text "+ Upload" ]
+        , div
+            [ style "display" "flex"
+            , style "height" "100%"
+            , style "gap" "1em"
             ]
+            ((Dict.filter (\k _ -> Set.member k model.selected) docs
+                |> Dict.values
+                |> actionButtons
+                |> List.map (\b -> ActionButton.toHtml b model.selected docs)
+             )
+                ++ viewAdd
+            )
         ]
 
-    else
-        [ button [ class "outline", disabled alreadySigned, onClick (SignClicked model.selected) ] [ text "Sign" ]
-        , button [ class "outline", onClick (DeleteClicked model.selected) ] [ text "Delete" ]
-        , button [ class "outline", onClick (DownloadClicked model.selected) ] [ text "Download" ]
+
+actionButtons : List Doc -> List (ActionButton Msg)
+actionButtons docs =
+    case List.unique <| List.map Doc.isUploadedToIPFS docs of
+        [] ->
+            actionButtonsInactive
+
+        [ False ] ->
+            actionButtonsDocs
+
+        [ True ] ->
+            actionButtonsIPFS
+
+        _ ->
+            actionButtonsMixed
+
+
+viewAdd : List (Html Msg)
+viewAdd =
+    [ div []
+        [ hiddenInputSingle "add" [ "application/pdf" ] PdfLoaded
+        , label [ for "add", attribute "role" "button" ] [ text "Prepare" ]
         ]
+    ]
+
+
+actionButtonsInactive : List (ActionButton msg)
+actionButtonsInactive =
+    [ "Upload", "Cancel", "View" ]
+        |> List.map ActionButton.inactive
+
+
+actionButtonsDocs : List (ActionButton Msg)
+actionButtonsDocs =
+    ([ { label = "Upload", toMsg = UploadedToIPFSClicked, isDisabled = isAlreadyUploadedToIPFS }
+     , { label = "Cancel", toMsg = DeleteClicked, isDisabled = \_ _ -> False }
+     ]
+        |> List.map ActionButton.init
+    )
+        ++ [ ActionButton.initCustom
+                { label = "View"
+                , toMsg =
+                    \keys docs ->
+                        if Set.size keys == 1 then
+                            Dict.values docs
+                                |> List.head
+                                |> Maybe.map PreviewClicked
+
+                        else
+                            Nothing
+                , isDisabled = \keys _ -> Set.size keys /= 1
+                }
+           ]
+
+
+actionButtonsIPFS : List (ActionButton Msg)
+actionButtonsIPFS =
+    ([]
+        |> List.map ActionButton.init
+    )
+        ++ [ ActionButton.initCustom
+                { label = "View"
+                , toMsg =
+                    \keys docs ->
+                        if Set.size keys == 1 then
+                            Dict.values docs
+                                |> List.head
+                                |> Maybe.map PreviewClicked
+
+                        else
+                            Nothing
+                , isDisabled = \keys _ -> Set.size keys /= 1
+                }
+           ]
+
+
+actionButtonsMixed : List (ActionButton Msg)
+actionButtonsMixed =
+    [ "Upload", "Cancel", "View" ]
+        |> List.map ActionButton.inactive
+
+
+isAlreadyUploadedToIPFS : Set Int -> Dict Int Doc -> Bool
+isAlreadyUploadedToIPFS selected docs =
+    selected
+        |> Set.toList
+        |> List.filterMap (\k -> Dict.get k docs)
+        |> List.any (\d -> Doc.isUploadedToIPFS d)
+
+
+isAlreadySigned : Set Int -> Dict Int Doc -> Bool
+isAlreadySigned selected docs =
+    selected
+        |> Set.toList
+        |> List.filterMap (\k -> Dict.get k docs)
+        |> List.any (\d -> not (Maybe.isNothing (Doc.signed d)))
+
+
+isAlreadyEncrypted : Set Int -> Dict Int Doc -> Bool
+isAlreadyEncrypted selected docs =
+    selected
+        |> Set.toList
+        |> List.filterMap (\k -> Dict.get k docs)
+        |> List.any (\d -> not (Maybe.isNothing (Doc.encryptionKey d)))
 
 
 viewDocs : Model -> List ( Int, Doc ) -> Html Msg
@@ -356,7 +472,7 @@ viewTh col =
     th
         [ attribute "scope" "col"
         ]
-        [ text <| colToString col ]
+        [ small [] [ text <| colToString col ] ]
 
 
 viewThSorted : Maybe ( Column, Bool ) -> Column -> Html Msg
@@ -394,7 +510,7 @@ viewThSorted sel col =
         [ attribute "scope" "col"
         , onClick msg
         ]
-        [ text <| colToString col ++ " " ++ icon ]
+        [ small [] [ text <| colToString col ++ icon ] ]
 
 
 viewPreview : Model -> Html Msg
@@ -436,7 +552,7 @@ viewPreview model =
 
 
 viewRow : Model -> ( Int, Doc ) -> Html Msg
-viewRow { signed, selected } ( key, doc ) =
+viewRow { signed, selected, encrypted, uplodedToIPFS } ( key, doc ) =
     let
         isSelected =
             Set.member key selected
@@ -452,28 +568,119 @@ viewRow { signed, selected } ( key, doc ) =
         , class "warning"
         ]
         [ td [] [ input [ type_ "checkbox", checked isSelected ] [] ]
-        , td [] [ strong [ onClick (PreviewClicked doc) ] [ a [ href "" ] [ text doc.file.name ] ] ]
+        , td [] [ strong [ onClick (PreviewClicked doc) ] [ a [ href "" ] [ text <| Doc.name doc ] ] ]
         , td [] [ viewSigned (Set.member key signed) doc ]
-        , td [] [ span [] [ text <| String.fromInt doc.file.size ++ "B" ] ]
-        , td [] [ span [] [ text <| toUtcString doc.file.lastModified ] ]
+        , td [] [ viewEncrypted (Set.member key encrypted) doc ]
+        , td [] [ viewUploadToIPFS (Set.member key uplodedToIPFS) doc ]
+        , td []
+            [ small []
+                [ doc
+                    |> Doc.fileSize
+                    |> Maybe.map String.fromInt
+                    |> Maybe.map (\x -> x ++ "B")
+                    |> Maybe.withDefault ""
+                    |> text
+                ]
+            ]
+        , td []
+            [ small []
+                [ Doc.file doc
+                    |> Maybe.map (toUtcString << .lastModified)
+                    |> Maybe.withDefault ""
+                    |> text
+                ]
+            ]
+        ]
+
+
+viewUploadToIPFS : Bool -> Doc -> Html Msg
+viewUploadToIPFS isLoading doc =
+    case Doc.lighthouse doc of
+        Just lighthouse ->
+            div
+                [ style "max-width" "100px"
+                , style "height" "1.4em"
+                , style "overflow" "hidden"
+                , style "text-overflow" "ellipsis"
+                , title lighthouse.hash
+                ]
+                [ small
+                    [ if isLoading && (not <| Doc.isUploadedToIPFS doc) then
+                        attribute "aria-busy" "true"
+
+                      else
+                        style "" ""
+                    ]
+                    [ text lighthouse.hash ]
+                ]
+
+        Nothing ->
+            text ""
+
+
+viewEncrypted : Bool -> Doc -> Html Msg
+viewEncrypted isLoading doc =
+    div
+        [ style "max-width" "100px"
+        , style "height" "1.4em"
+        , style "overflow" "hidden"
+        , style "text-overflow" "ellipsis"
+        , title <|
+            case Doc.encryptionKey doc of
+                Just encryptionKey ->
+                    EncryptionKey.toString encryptionKey
+
+                Nothing ->
+                    "The document is not yet encryptionKey"
+        ]
+        [ small
+            [ if isLoading && (Maybe.isNothing <| Doc.encryptionKey doc) then
+                attribute "aria-busy" "true"
+
+              else
+                style "" ""
+            ]
+            [ text <|
+                case Doc.encryptionKey doc of
+                    Just encryptionKey ->
+                        "yes"
+
+                    Nothing ->
+                        "no"
+            ]
         ]
 
 
 viewSigned : Bool -> Doc -> Html Msg
 viewSigned isLoading doc =
-    span
-        [ if isLoading && not doc.signed then
-            attribute "aria-busy" "true"
+    div
+        [ style "max-width" "100px"
+        , style "height" "1.4em"
+        , style "overflow" "hidden"
+        , style "text-overflow" "ellipsis"
+        , title <|
+            case Doc.signed doc of
+                Just sign ->
+                    Sign.toString sign
 
-          else
-            style "" ""
+                Nothing ->
+                    "The document is not yet signed"
         ]
-        [ text <|
-            if doc.signed then
-                "yes"
+        [ small
+            [ if isLoading && (Maybe.isNothing <| Doc.signed doc) then
+                attribute "aria-busy" "true"
 
-            else
-                "no"
+              else
+                style "" ""
+            ]
+            [ text <|
+                case Doc.signed doc of
+                    Just sign ->
+                        Sign.toString sign
+
+                    Nothing ->
+                        "not signed"
+            ]
         ]
 
 

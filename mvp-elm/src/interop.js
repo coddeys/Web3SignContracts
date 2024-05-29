@@ -1,12 +1,16 @@
 import { upload, getAll,getAllKeys, del, get, set} from "./js/indexeddb.js";
 import { requestAccounts, getAccounts } from "./js/metamask.js"
+import { uploadToLighthouse } from "./js/lighthouse.js"
+
 
 // This is called BEFORE your Elm app starts up
 //
 // The value returned here will be passed as flags
 // into your `Shared.init` function.
 export const flags =  ({ env }) => {
-  const data = { accounts: [] };
+  const apiKey = env.LIGHTHOUSE_API_KEY;
+
+  const data = { lighthouseApiKey: apiKey };
   return data;
 };
 
@@ -20,6 +24,9 @@ function sleep (time) {
 // to your Elm application, or subscribe to incoming
 // messages from Elm
 export const onReady = ({ app, env }) => {
+  // This key should be obtained from https://lighthouse.storage
+  const apiKey = env.LIGHTHOUSE_API_KEY;
+
   isConnected();
   if (app.ports && app.ports.outgoing) {
     app.ports.outgoing.subscribe(({ tag, data }) => {
@@ -42,7 +49,7 @@ export const onReady = ({ app, env }) => {
           encrypt(data.key);
           return;
         case "UPLOAD_TO_IPFS":
-          uploadToIPFS(data.key);
+          uploadToIPFS(apiKey, data.key);
           return;
         case "SYNC":
           sync();
@@ -110,24 +117,12 @@ export const onReady = ({ app, env }) => {
     return encryptionKey;
   }
 
-  async function uploadToIPFS(key) {
+  async function uploadToIPFS(apiKey, key) {
     let doc = await get(key);
-    let lighthouseResult = await uploadToLighthouse(doc);
+    let lighthouseResult = await uploadToLighthouse(apiKey, doc.file);
 
-    await set(key, {...doc, lighthouse: lighthouseResult } );
+    await set(key, {...doc, lighthouse: lighthouseResult.data } );
     await sync();
-  }
-
-  async function uploadToLighthouse(doc){
-    // TODO: Upload a file to Lighthouse.
-    const result = {
-        Name: 'Name.pdf',
-        Hash: 'QmUHDKv3NNL1mrg4NTW4WwJqetzwZbGNitdjr2G6Z5Xe6s',
-        Size: '31735'
-      }
-    await sleep(1000);
-
-    return result;
   }
 
 

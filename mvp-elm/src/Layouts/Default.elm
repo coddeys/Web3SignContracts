@@ -51,7 +51,7 @@ init _ =
 
 
 type Msg
-    = LoginClicked
+    = ConnectClicked
     | Incoming { data : Json.Encode.Value, tag : String }
 
 
@@ -94,9 +94,9 @@ update msg model =
                     , Effect.none
                     )
 
-        LoginClicked ->
+        ConnectClicked ->
             ( model
-            , Effect.loginClicked
+            , Effect.connectClicked
             )
 
 
@@ -117,11 +117,7 @@ view shared { fromMsg, model, content } =
             [ ul []
                 [ li [] [ viewLink "Web3Sign" Path.Home_ ] ]
             , ul []
-                ([ li [] [ div [ attribute "role" "button", onClick (fromMsg LoginClicked) ] [ text "Sign in" ] ] ]
-                 -- [ viewLink "Docs" Path.Docs
-                 -- , li [] [ div [ attribute "role" "button", onClick (fromMsg LogoutClicked) ] [ text "Sign out" ] ]
-                 -- ]
-                )
+                [ li [] [ div [ attribute "role" "button", onClick (fromMsg ConnectClicked) ] [ text "Connect" ] ] ]
             ]
         , main_ [ class "container" ] content.body
         ]

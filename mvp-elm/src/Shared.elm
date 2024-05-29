@@ -27,14 +27,14 @@ import Shared.Msg
 
 
 type alias Flags =
-    { message : String
+    { lighthouseApiKey : String
     }
 
 
 decoder : Json.Decode.Decoder Flags
 decoder =
     Json.Decode.map Flags
-        (Json.Decode.field "message" Json.Decode.string)
+        (Json.Decode.field "lighthouseApiKey" Json.Decode.string)
 
 
 
@@ -47,11 +47,22 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { docs = Dict.empty
-      , user = Nothing
-      }
-    , Effect.syncOut
-    )
+    case flagsResult of
+        Ok { lighthouseApiKey } ->
+            ( { docs = Dict.empty
+              , user = Nothing
+              , lighthouseApiKey = lighthouseApiKey
+              }
+            , Effect.syncOut
+            )
+
+        Err _ ->
+            ( { docs = Dict.empty
+              , user = Nothing
+              , lighthouseApiKey = ""
+              }
+            , Effect.syncOut
+            )
 
 
 

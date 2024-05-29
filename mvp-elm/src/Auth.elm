@@ -1,4 +1,4 @@
-module Auth exposing (User, onPageLoad)
+module Auth exposing (User, account, onPageLoad)
 
 import Auth.Action
 import Dict
@@ -9,20 +9,17 @@ import Shared.Model
 
 
 type alias User =
-    Shared.Model.User
+    Maybe Shared.Model.User
+
+
+account : User -> Maybe String
+account user =
+    Maybe.map .accounts user
+        |> Maybe.andThen List.head
 
 
 {-| Called before an auth-only page is loaded.
 -}
 onPageLoad : Shared.Model -> Route () -> Auth.Action.Action User
 onPageLoad shared route =
-    case shared.user of
-        Just user ->
-            Auth.Action.loadPageWithUser user
-
-        Nothing ->
-            Auth.Action.pushRoute
-                { path = Route.Path.Home_
-                , query = Dict.empty
-                , hash = Nothing
-                }
+    Auth.Action.loadPageWithUser shared.user

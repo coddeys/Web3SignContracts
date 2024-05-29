@@ -4,13 +4,15 @@
   "description": "Upload pdf files",
   "main": "index.js",
   "scripts": {
-    "server": "elm-land server",
+    "dev": "elm-land server",
     "build": "elm-land build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@lighthouse-web3/sdk": "^0.2.3",
+    "axios": "^1.4.0",
     "elm-land": "^0.18.3",
     "idb": "^7.1.1"
   }

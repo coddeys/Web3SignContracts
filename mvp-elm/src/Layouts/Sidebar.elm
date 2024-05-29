@@ -54,6 +54,7 @@ init _ =
 
 type Msg
     = LogoutClicked
+    | ConnectClicked
     | Incoming { data : Json.Encode.Value, tag : String }
 
 
@@ -110,6 +111,11 @@ update msg model =
                     , Effect.none
                     )
 
+        ConnectClicked ->
+            ( model
+            , Effect.connectClicked
+            )
+
         LogoutClicked ->
             ( model
             , Effect.logout
@@ -141,12 +147,40 @@ view settings route { fromMsg, model, content } =
             [ ul []
                 [ li [] [ viewLink "Web3Sign" Path.Home_ ] ]
             , ul []
-                [ li [] [ div [ onClick (fromMsg LogoutClicked) ] [ text "Sign out" ] ]
+                [ -- li [] [ div [] [a [ href "", onClick (fromMsg LogoutClicked) ] [ text "Sign  out" ] ]]
+                  li []
+                    [ div []
+                        [ Auth.account settings.user
+                            |> Maybe.map viewAccount
+                            |> Maybe.withDefault (viewConnect fromMsg)
+                        ]
+                    ]
                 ]
             ]
-        , main_ [ class "container" ] content.body
+        , case Auth.account settings.user of
+            Just _ ->
+                main_ [ class "container" ] content.body
+
+            Nothing ->
+                viewNotConnected
         ]
     }
+
+
+viewAccount : String -> Html msg
+viewAccount str =
+    kbd [ title "Account" ]
+        [ text <| String.left 5 str ++ "..." ++ String.right 4 str ]
+
+
+viewConnect : (Msg -> mainMsg) -> Html mainMsg
+viewConnect fromMsg =
+    li [] [ div [ attribute "role" "button", onClick (fromMsg ConnectClicked) ] [ text "Connect" ] ]
+
+
+viewNotConnected =
+    div [ class "container" ]
+        [ text "Please connect your wallet" ]
 
 
 viewLink : String -> Path -> Html msg

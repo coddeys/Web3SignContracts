@@ -1,7 +1,8 @@
-module Shared.Model exposing (Doc, Docs, Model, User, docsDecoder, isUplodedToIPFS)
+module Shared.Model exposing (Docs, Model, User, docsDecoder)
 
 {-| -}
 
+import Data.Doc as Doc exposing (Doc)
 import Data.EncryptionKey as EncryptionKey exposing (EncryptionKey)
 import Data.Lighthouse as Lighthouse exposing (Lighthouse)
 import Data.Sign as Sign exposing (Sign)
@@ -9,7 +10,6 @@ import Dict exposing (Dict)
 import FileValue exposing (File)
 import Json.Decode
 import Json.Encode
-import Maybe.Extra as Maybe
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -22,6 +22,7 @@ own file, so they can be imported by `Effect.elm`
 type alias Model =
     { docs : Docs
     , user : Maybe User
+    , lighthouseApiKey : String
     }
 
 
@@ -31,20 +32,6 @@ type alias User =
 
 type alias Docs =
     Dict Int Doc
-
-
-type alias Doc =
-    { name : String
-    , file : File
-    , signed : Maybe Sign
-    , encryptionKey : Maybe EncryptionKey
-    , lighthouse : Maybe Lighthouse
-    }
-
-
-isUplodedToIPFS : Doc -> Bool
-isUplodedToIPFS doc =
-    Maybe.isJust doc.lighthouse
 
 
 docsDecoder : Json.Decode.Decoder Docs
@@ -61,14 +48,4 @@ docsDecoder_ : Json.Decode.Decoder ( Int, Doc )
 docsDecoder_ =
     Json.Decode.map2 Tuple.pair
         (Json.Decode.field "key" Json.Decode.int)
-        (Json.Decode.field "doc" docDecoder)
-
-
-docDecoder : Json.Decode.Decoder Doc
-docDecoder =
-    Json.Decode.map5 Doc
-        (Json.Decode.field "name" Json.Decode.string)
-        (Json.Decode.field "file" FileValue.decoder)
-        (Json.Decode.maybe <| Json.Decode.field "signed" Sign.decoder)
-        (Json.Decode.maybe <| Json.Decode.field "encryptionKey" EncryptionKey.decoder)
-        (Json.Decode.maybe <| Json.Decode.field "lighthouse" Lighthouse.decoder)
+        (Json.Decode.field "doc" Doc.decoder)

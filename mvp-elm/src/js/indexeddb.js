@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 
-const dbPromise = openDB('web3SignDB', 1, {
+const dbPromise = openDB('web3signDB', 1, {
   upgrade(db) {
     db.createObjectStore('docs', { autoIncrement: true });
   },

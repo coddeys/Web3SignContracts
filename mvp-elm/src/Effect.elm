@@ -4,7 +4,7 @@ port module Effect exposing
     , sendCmd, sendMsg
     , pushRoute, replaceRoute, loadExternalUrl
     , map, toCmd
-    , del, incoming, login, loginClicked, logout, sign, syncIn, syncOut, upload
+    , connectClicked, del, encrypt, incoming, login, logout, sign, syncIn, syncOut, upload, uploadToIPFS
     )
 
 {-|
@@ -56,10 +56,10 @@ port outgoing : { tag : String, data : Json.Encode.Value } -> Cmd msg
 port incoming : ({ tag : String, data : Json.Encode.Value } -> msg) -> Sub msg
 
 
-loginClicked : Effect msg
-loginClicked =
+connectClicked : Effect msg
+connectClicked =
     SendMessageToJavaScript
-        { tag = "LOGIN_CLICKED"
+        { tag = "CONNECT"
         , data = Json.Encode.null
         }
 
@@ -69,6 +69,14 @@ upload file =
     SendMessageToJavaScript
         { tag = "UPLOAD"
         , data = FileValue.encode file
+        }
+
+
+uploadToIPFS : Int -> Effect msg
+uploadToIPFS key =
+    SendMessageToJavaScript
+        { tag = "UPLOAD_TO_IPFS"
+        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
         }
 
 
@@ -92,6 +100,14 @@ sign : Int -> Effect msg
 sign key =
     SendMessageToJavaScript
         { tag = "SIGN"
+        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        }
+
+
+encrypt : Int -> Effect msg
+encrypt key =
+    SendMessageToJavaScript
+        { tag = "ENCRYPT"
         , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
         }
 
