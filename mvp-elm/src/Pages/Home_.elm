@@ -1,5 +1,6 @@
 module Pages.Home_ exposing (Model, Msg, page)
 
+import Auth
 import Effect exposing (Effect)
 import Html exposing (..)
 import Layouts
@@ -76,6 +77,6 @@ view model =
     { title = "Pages.Home_"
     , body =
         [ h1 [] [ text "Sign and Store" ]
-        , p [] [ text "Web3Sign enables you to store and sign documents in a completely decentralized manner. Documents are stored using IPFS storage, and signatures are recorded on the blockchain. This system operates without a centralized service provider. You can designate signers for your document, who will receive notifications prompting them to sign. You will be alerted as soon as all signers have completed their signatures." ]
+        , p [] [ text "Web3Sign lets you store and sign documents in a totally decentralized way. Documents are stored on IPFS storage. Signatures are stored on the blockchain. There is no centralized service provider. You can specify signers of your document, and they will be notified about the need to sign. You will be notified as soon as the document gets signed by everyone." ]
         ]
     }

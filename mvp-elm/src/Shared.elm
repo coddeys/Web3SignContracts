@@ -47,8 +47,8 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { accounts = []
-      , docs = []
+    ( { docs = Dict.empty
+      , user = Nothing
       }
     , Effect.syncOut
     )
@@ -65,8 +65,8 @@ type alias Msg =
 update : Route () -> Msg -> Model -> ( Model, Effect Msg )
 update route msg model =
     case msg of
-        Shared.Msg.SignIn { accounts } ->
-            ( { model | accounts = accounts }
+        Shared.Msg.Login { accounts } ->
+            ( { model | user = Just { accounts = accounts } }
             , Effect.pushRoute
                 { path = Route.Path.Docs
                 , query = Dict.empty
@@ -74,8 +74,8 @@ update route msg model =
                 }
             )
 
-        Shared.Msg.SignOut ->
-            ( { model | accounts = [] }
+        Shared.Msg.Logout ->
+            ( { model | user = Nothing }
             , Effect.pushRoute
                 { path = Route.Path.Home_
                 , query = Dict.empty

@@ -1,5 +1,6 @@
-module Layouts.Default exposing (Model, Msg, Settings, layout)
+module Layouts.Sidebar exposing (Model, Msg, Settings, layout)
 
+import Auth
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import FileValue exposing (File)
@@ -12,13 +13,14 @@ import Layout exposing (Layout)
 import Route exposing (Route)
 import Route.Path as Path exposing (Path)
 import Shared
-import Shared.Model exposing (Docs)
-import Tuple
+import Shared.Model
 import View exposing (View)
 
 
 type alias Settings =
-    { title : String }
+    { title : String
+    , user : Auth.User
+    }
 
 
 layout : Settings -> Shared.Model -> Route () -> Layout Model Msg mainMsg
@@ -26,7 +28,7 @@ layout settings shared route =
     Layout.new
         { init = init
         , update = update
-        , view = view shared
+        , view = view settings route
         , subscriptions = subscriptions
         }
 
@@ -51,13 +53,27 @@ init _ =
 
 
 type Msg
-    = LoginClicked
+    = LogoutClicked
     | Incoming { data : Json.Encode.Value, tag : String }
 
 
 metaMaskAccountDecoder : Json.Decode.Decoder (List String)
 metaMaskAccountDecoder =
     Json.Decode.field "accounts" (Json.Decode.list Json.Decode.string)
+
+
+docsDecoder : Json.Decode.Decoder (Dict Int File)
+docsDecoder =
+    Json.Decode.list docsDecoder_
+        |> Json.Decode.field "docs"
+        |> Json.Decode.map Dict.fromList
+
+
+docsDecoder_ : Json.Decode.Decoder ( Int, File )
+docsDecoder_ =
+    Json.Decode.map2 Tuple.pair
+        (Json.Decode.field "key" Json.Decode.int)
+        (Json.Decode.field "file" FileValue.decoder)
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -94,9 +110,9 @@ update msg model =
                     , Effect.none
                     )
 
-        LoginClicked ->
+        LogoutClicked ->
             ( model
-            , Effect.loginClicked
+            , Effect.logout
             )
 
 
@@ -109,19 +125,24 @@ subscriptions model =
 -- VIEW
 
 
-view : Shared.Model -> { fromMsg : Msg -> mainMsg, content : View mainMsg, model : Model } -> View mainMsg
-view shared { fromMsg, model, content } =
-    { title = content.title
+view :
+    Settings
+    -> Route ()
+    ->
+        { fromMsg : Msg -> mainMsg
+        , content : View mainMsg
+        , model : Model
+        }
+    -> View mainMsg
+view settings route { fromMsg, model, content } =
+    { title = content.title ++ " | Web3Sign"
     , body =
         [ nav [ class "container-fluid" ]
             [ ul []
                 [ li [] [ viewLink "Web3Sign" Path.Home_ ] ]
             , ul []
-                ([ li [] [ div [ attribute "role" "button", onClick (fromMsg LoginClicked) ] [ text "Sign in" ] ] ]
-                 -- [ viewLink "Docs" Path.Docs
-                 -- , li [] [ div [ attribute "role" "button", onClick (fromMsg LogoutClicked) ] [ text "Sign out" ] ]
-                 -- ]
-                )
+                [ li [] [ div [ onClick (fromMsg LogoutClicked) ] [ text "Sign out" ] ]
+                ]
             ]
         , main_ [ class "container" ] content.body
         ]

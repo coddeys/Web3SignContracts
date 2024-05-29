@@ -2,7 +2,9 @@ module Shared.Msg exposing (Msg(..))
 
 {-| -}
 
+import Dict exposing (Dict)
 import FileValue exposing (File)
+import Shared.Model
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -13,6 +15,6 @@ own file, so they can be imported by `Effect.elm`
 
 -}
 type Msg
-    = SignIn { accounts : List String }
-    | SignOut
-    | SyncIn { docs : List File }
+    = Login { accounts : List String }
+    | Logout
+    | SyncIn { docs : Shared.Model.Docs }

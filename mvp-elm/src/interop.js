@@ -1,4 +1,5 @@
-import { initDB, getAll, upload } from "./js/store.js";
+import { upload, getAll,getAllKeys, del, get, set} from "./js/indexeddb.js";
+
 // This is called BEFORE your Elm app starts up
 //
 // The value returned here will be passed as flags
@@ -9,21 +10,32 @@ export const flags = ({ env }) => {
   };
 };
 
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+
 // This is called AFTER your Elm app starts up
 //
 // Here you can work with `app.ports` to send messages
 // to your Elm application, or subscribe to incoming
 // messages from Elm
 export const onReady = ({ app, env }) => {
-  initDB();
   if (app.ports && app.ports.outgoing) {
     app.ports.outgoing.subscribe(({ tag, data }) => {
       switch (tag) {
-        case "LOGIN":
+        case "LOGIN_CLICKED":
           getAccount();
           return;
         case "UPLOAD":
           upload(data);
+          sync();
+          return;
+        case "DEL":
+          del(data.key);
+          sync();
+          return;
+        case "SIGN":
+          sign(data.key);
           return;
         case "SYNC":
           sync();
@@ -35,13 +47,28 @@ export const onReady = ({ app, env }) => {
     });
   }
 
+  async function sign(key) {
+    let doc = await get(key);
+    let signedDoc = await signDoc(doc);
+
+    await set(key, {...signedDoc, signed: true} );
+    await sync();
+  }
+
+  async function signDoc(doc){
+    // TODO: Sign the document
+    await sleep(1000);
+    return doc;
+  }
+
   async function sync() {
     const docs = await getAll();
-    console.log(docs);
+    const keys = await getAllKeys();
+    const data =(docs.map((x,i) =>({key: (keys[i]), doc: x})));
 
     app.ports.incoming.send({
       tag: "GOT_DOCS",
-      data: { docs: docs.map((x) => x.file) },
+      data: { docs: data},
     });
   }
 
@@ -57,7 +84,6 @@ export const onReady = ({ app, env }) => {
           console.error(err);
         }
       });
-    console.log(accounts);
 
     app.ports.incoming.send({
       tag: "GOT_ACCOUNT",

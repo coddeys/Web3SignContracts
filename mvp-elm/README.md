@@ -1,6 +1,6 @@
 * [x] Allow user to connect Filecoin (Metamask on Filecoin/IPFS network) wallet
 * [x] Load the PDF document into SPA (local storage)
-* [ ] Retrive docs 
+* [x] Retrive docs
 * [ ] We should have a list of wallet to which encrypt.
 * [ ] Sign PDF document
 * [ ] Encrypt the PDF document locally.

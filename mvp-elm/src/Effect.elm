@@ -4,8 +4,7 @@ port module Effect exposing
     , sendCmd, sendMsg
     , pushRoute, replaceRoute, loadExternalUrl
     , map, toCmd
-    , login, upload
-    , incoming, signIn, signOut, syncIn, syncOut
+    , del, incoming, login, loginClicked, logout, sign, syncIn, syncOut, upload
     )
 
 {-|
@@ -17,8 +16,6 @@ port module Effect exposing
 
 @docs map, toCmd
 
-@docs login, upload, sync
-
 -}
 
 import Browser.Navigation
@@ -29,7 +26,7 @@ import Json.Encode
 import Route exposing (Route)
 import Route.Path
 import Route.Query
-import Shared.Model
+import Shared.Model exposing (Docs)
 import Shared.Msg
 import Task
 import Url exposing (Url)
@@ -59,10 +56,10 @@ port outgoing : { tag : String, data : Json.Encode.Value } -> Cmd msg
 port incoming : ({ tag : String, data : Json.Encode.Value } -> msg) -> Sub msg
 
 
-login : Effect msg
-login =
+loginClicked : Effect msg
+loginClicked =
     SendMessageToJavaScript
-        { tag = "LOGIN"
+        { tag = "LOGIN_CLICKED"
         , data = Json.Encode.null
         }
 
@@ -83,21 +80,37 @@ syncOut =
         }
 
 
+del : Int -> Effect msg
+del key =
+    SendMessageToJavaScript
+        { tag = "DEL"
+        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        }
+
+
+sign : Int -> Effect msg
+sign key =
+    SendMessageToJavaScript
+        { tag = "SIGN"
+        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        }
+
+
 
 -- SHARED
 
 
-signIn : { accounts : List String } -> Effect msg
-signIn options =
-    SendSharedMsg (Shared.Msg.SignIn options)
+login : { accounts : List String } -> Effect msg
+login options =
+    SendSharedMsg (Shared.Msg.Login options)
 
 
-signOut : Effect msg
-signOut =
-    SendSharedMsg Shared.Msg.SignOut
+logout : Effect msg
+logout =
+    SendSharedMsg Shared.Msg.Logout
 
 
-syncIn : { docs : List File } -> Effect msg
+syncIn : { docs : Docs } -> Effect msg
 syncIn options =
     SendSharedMsg (Shared.Msg.SyncIn options)
 
