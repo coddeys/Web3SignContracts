@@ -1,11 +1,15 @@
-module Shared.Model exposing (Doc, Docs, Model, User, docsDecoder)
+module Shared.Model exposing (Doc, Docs, Model, User, docsDecoder, isUplodedToIPFS)
 
 {-| -}
 
+import Data.EncryptionKey as EncryptionKey exposing (EncryptionKey)
+import Data.Lighthouse as Lighthouse exposing (Lighthouse)
+import Data.Sign as Sign exposing (Sign)
 import Dict exposing (Dict)
 import FileValue exposing (File)
 import Json.Decode
 import Json.Encode
+import Maybe.Extra as Maybe
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -30,9 +34,17 @@ type alias Docs =
 
 
 type alias Doc =
-    { file : File
-    , signed : Bool
+    { name : String
+    , file : File
+    , signed : Maybe Sign
+    , encryptionKey : Maybe EncryptionKey
+    , lighthouse : Maybe Lighthouse
     }
+
+
+isUplodedToIPFS : Doc -> Bool
+isUplodedToIPFS doc =
+    Maybe.isJust doc.lighthouse
 
 
 docsDecoder : Json.Decode.Decoder Docs
@@ -54,10 +66,9 @@ docsDecoder_ =
 
 docDecoder : Json.Decode.Decoder Doc
 docDecoder =
-    Json.Decode.map2 Doc
+    Json.Decode.map5 Doc
+        (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "file" FileValue.decoder)
-        (Json.Decode.oneOf
-            [ Json.Decode.field "signed" Json.Decode.bool
-            , Json.Decode.succeed False
-            ]
-        )
+        (Json.Decode.maybe <| Json.Decode.field "signed" Sign.decoder)
+        (Json.Decode.maybe <| Json.Decode.field "encryptionKey" EncryptionKey.decoder)
+        (Json.Decode.maybe <| Json.Decode.field "lighthouse" Lighthouse.decoder)
