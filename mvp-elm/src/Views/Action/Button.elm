@@ -10,15 +10,15 @@ import Shared.Model exposing (Docs)
 
 type alias ActionButton msg =
     { label : String
-    , toMsg : Set Int -> Docs -> Maybe msg
-    , isDisabled : Set Int -> Docs -> Bool
+    , toMsg : Set String -> Docs -> Maybe msg
+    , isDisabled : Set String -> Docs -> Bool
     }
 
 
 init :
     { label : String
-    , toMsg : Set Int -> msg
-    , isDisabled : Set Int -> Docs -> Bool
+    , toMsg : Set String -> msg
+    , isDisabled : Set String -> Docs -> Bool
     }
     -> ActionButton msg
 init { label, toMsg, isDisabled } =
@@ -30,8 +30,8 @@ init { label, toMsg, isDisabled } =
 
 initCustom :
     { label : String
-    , toMsg : Set Int -> Docs -> Maybe msg
-    , isDisabled : Set Int -> Docs -> Bool
+    , toMsg : Set String -> Docs -> Maybe msg
+    , isDisabled : Set String -> Docs -> Bool
     }
     -> ActionButton msg
 initCustom { label, toMsg, isDisabled } =
@@ -49,7 +49,7 @@ inactive label =
     }
 
 
-toHtml : ActionButton msg -> Set Int -> Docs -> Html msg
+toHtml : ActionButton msg -> Set String -> Docs -> Html msg
 toHtml { label, toMsg, isDisabled } keys docs =
     button
         [ class "outline"

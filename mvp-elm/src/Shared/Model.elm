@@ -1,4 +1,4 @@
-module Shared.Model exposing (Docs, Model, User, docsDecoder)
+module Shared.Model exposing (Docs, Model, User, docsDecoder, docsKey)
 
 {-| -}
 
@@ -10,6 +10,7 @@ import Dict exposing (Dict)
 import FileValue exposing (File)
 import Json.Decode
 import Json.Encode
+import Set
 
 
 {-| Normally, this value would live in "Shared.elm"
@@ -31,21 +32,64 @@ type alias User =
 
 
 type alias Docs =
-    Dict Int Doc
+    Dict String Doc
+
+
+{-| Hacky way to generate the new Doc key
+-}
+docsKey : Docs -> String
+docsKey docs =
+    docs
+        |> Dict.keys
+        |> List.filterMap String.toInt
+        |> List.maximum
+        |> Maybe.withDefault 0
+        |> (+) 1
+        |> String.fromInt
 
 
 docsDecoder : Json.Decode.Decoder Docs
 docsDecoder =
-    docsDecoder_
-        |> Json.Decode.maybe
-        |> Json.Decode.list
-        |> Json.Decode.field "docs"
-        |> Json.Decode.map (List.filterMap identity)
+    -- let
+    --     fn fieldName =
+    --         docsDecoder_
+    --             |> Json.Decode.maybe
+    --             |> Json.Decode.list
+    --             |> Json.Decode.field fieldName
+    --             |> Json.Decode.map (List.filterMap identity)
+    -- in
+    -- -- TODO: refactor this logic, it's confusing
+    -- Json.Decode.map2 concat (fn "ipfs") (fn "docs")
+    --     |> Json.Decode.map Dict.fromList
+    Json.Decode.field "docs" (Json.Decode.list docDecoder)
         |> Json.Decode.map Dict.fromList
 
 
-docsDecoder_ : Json.Decode.Decoder ( Int, Doc )
-docsDecoder_ =
+
+-- concat : List ( String, Doc ) -> List ( String, Doc ) -> List ( String, Doc )
+-- concat xs ys =
+--     let
+--         isDup ( k, v ) =
+--             xs
+--                 |> List.map Tuple.second
+--                 |> List.filterMap Doc.cid
+--                 |> Set.fromList
+--                 |> Set.member k
+--     in
+--     xs ++ List.filter (not << isDup) ys
+
+
+docDecoder : Json.Decode.Decoder ( String, Doc )
+docDecoder =
     Json.Decode.map2 Tuple.pair
-        (Json.Decode.field "key" Json.Decode.int)
+        keyDecoder
         (Json.Decode.field "doc" Doc.decoder)
+
+
+keyDecoder : Json.Decode.Decoder String
+keyDecoder =
+    [ Json.Decode.field "key" Json.Decode.int
+        |> Json.Decode.map String.fromInt
+    , Json.Decode.field "key" Json.Decode.string
+    ]
+        |> Json.Decode.oneOf

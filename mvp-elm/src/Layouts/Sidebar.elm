@@ -3,6 +3,7 @@ module Layouts.Sidebar exposing (Model, Msg, Settings, layout)
 import Auth
 import Dict exposing (Dict)
 import Effect exposing (Effect)
+import File
 import FileValue exposing (File)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -14,6 +15,7 @@ import Route exposing (Route)
 import Route.Path as Path exposing (Path)
 import Shared
 import Shared.Model
+import Task
 import View exposing (View)
 
 
@@ -38,12 +40,12 @@ layout settings shared route =
 
 
 type alias Model =
-    {}
+    { preview : Maybe String }
 
 
 init : () -> ( Model, Effect Msg )
 init _ =
-    ( {}
+    ( { preview = Nothing }
     , Effect.none
     )
 
@@ -56,6 +58,8 @@ type Msg
     = LogoutClicked
     | ConnectClicked
     | Incoming { data : Json.Encode.Value, tag : String }
+    | UrlGen String
+    | PreviewClosed
 
 
 metaMaskAccountDecoder : Json.Decode.Decoder (List String)
@@ -75,6 +79,11 @@ docsDecoder_ =
     Json.Decode.map2 Tuple.pair
         (Json.Decode.field "key" Json.Decode.int)
         (Json.Decode.field "file" FileValue.decoder)
+
+
+decryptedFileDecoder : Json.Decode.Decoder File.File
+decryptedFileDecoder =
+    Json.Decode.field "file" File.decoder
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -106,6 +115,18 @@ update msg model =
                             , Effect.none
                             )
 
+                "DECRYPTED_FILE_RECEIVED" ->
+                    case Json.Decode.decodeValue decryptedFileDecoder data of
+                        Ok file ->
+                            ( model
+                            , previewCmd file
+                            )
+
+                        Err err ->
+                            ( model
+                            , Effect.none
+                            )
+
                 _ ->
                     ( model
                     , Effect.none
@@ -120,6 +141,24 @@ update msg model =
             ( model
             , Effect.logout
             )
+
+        UrlGen str ->
+            ( { model | preview = Just str }
+            , Effect.none
+            )
+
+        PreviewClosed ->
+            ( { model | preview = Nothing }
+            , Effect.none
+            )
+
+
+previewCmd : File.File -> Effect Msg
+previewCmd file =
+    file
+        |> File.toUrl
+        |> Task.perform UrlGen
+        |> Effect.sendCmd
 
 
 subscriptions : Model -> Sub Msg
@@ -163,6 +202,7 @@ view settings route { fromMsg, model, content } =
 
             Nothing ->
                 viewNotConnected
+        , viewPreview fromMsg model
         ]
     }
 
@@ -190,3 +230,41 @@ viewLink label path =
             [ Path.href path ]
             [ text label ]
         ]
+
+
+viewPreview : (Msg -> msg) -> Model -> Html msg
+viewPreview fromMsg model =
+    case model.preview of
+        Just preview ->
+            div [ style "width" "100vw" ]
+                [ node "dialog"
+                    [ attribute "open" "" ]
+                    [ article
+                        [ style "max-width" "90%"
+                        , style "width" "90%"
+                        , style "max-height" "90%"
+                        , style "height" "100%"
+                        , style "overflow" "hidden"
+                        ]
+                        [ header []
+                            [ span [ class "close", attribute "arith-label" "Close", onClick <| fromMsg PreviewClosed ] []
+                            , text "Preview"
+                            ]
+                        , div
+                            [ style "width" "100%"
+                            , style "height" "100%"
+                            ]
+                            [ object
+                                [ style "width" "100%"
+                                , style "height" "100%"
+                                , style "padding-bottom" "2rem"
+                                , attribute "data" preview
+                                ]
+                                []
+                            ]
+                        ]
+                    ]
+                ]
+
+        Nothing ->
+            text ""

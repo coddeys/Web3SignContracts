@@ -14,8 +14,8 @@ export async function requestAccounts() {
   return accounts;
 }
 
-export function getAccounts() {
-  let accounts = ethereum.request({ method: 'eth_accounts' });
+export async function getAccounts() {
+  let accounts = await ethereum.request({ method: 'eth_accounts' });
   return accounts;
 }
 

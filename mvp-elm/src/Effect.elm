@@ -4,7 +4,7 @@ port module Effect exposing
     , sendCmd, sendMsg
     , pushRoute, replaceRoute, loadExternalUrl
     , map, toCmd
-    , connectClicked, del, encrypt, incoming, login, logout, sign, syncIn, syncOut, upload, uploadToIPFS
+    , connectClicked, del, downloadAndDecryptIPFS, incoming, login, logout, set, sign, signAndUpload, syncIn, syncOut, upload, uploadToIPFS
     )
 
 {-|
@@ -19,6 +19,7 @@ port module Effect exposing
 -}
 
 import Browser.Navigation
+import Data.MetaMask.Address as MetaMask
 import Dict exposing (Dict)
 import FileValue exposing (File)
 import Json.Decode
@@ -64,19 +65,23 @@ connectClicked =
         }
 
 
-upload : File -> Effect msg
-upload file =
+upload : String -> File -> Effect msg
+upload key file =
     SendMessageToJavaScript
         { tag = "UPLOAD"
-        , data = FileValue.encode file
+        , data =
+            [ ( "key", Json.Encode.string key )
+            , ( "file", FileValue.encode file )
+            ]
+                |> Json.Encode.object
         }
 
 
-uploadToIPFS : Int -> Effect msg
+uploadToIPFS : String -> Effect msg
 uploadToIPFS key =
     SendMessageToJavaScript
         { tag = "UPLOAD_TO_IPFS"
-        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        , data = Json.Encode.object [ ( "key", Json.Encode.string key ) ]
         }
 
 
@@ -88,27 +93,51 @@ syncOut =
         }
 
 
-del : Int -> Effect msg
+del : String -> Effect msg
 del key =
     SendMessageToJavaScript
         { tag = "DEL"
-        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        , data = Json.Encode.object [ ( "key", Json.Encode.string key ) ]
         }
 
 
-sign : Int -> Effect msg
+set : Json.Encode.Value -> Effect msg
+set obj =
+    SendMessageToJavaScript
+        { tag = "SET"
+        , data = obj
+        }
+
+
+signAndUpload : String -> MetaMask.Address -> Effect msg
+signAndUpload key address =
+    SendMessageToJavaScript
+        { tag = "SIGN_AND_UPLOAD"
+        , data =
+            Json.Encode.object
+                [ ( "key", Json.Encode.string key )
+                , ( "address", MetaMask.encode address )
+                ]
+        }
+
+
+sign : String -> Effect msg
 sign key =
     SendMessageToJavaScript
         { tag = "SIGN"
-        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        , data = Json.Encode.object [ ( "key", Json.Encode.string key ) ]
         }
 
 
-encrypt : Int -> Effect msg
-encrypt key =
+downloadAndDecryptIPFS : String -> String -> Effect msg
+downloadAndDecryptIPFS key cid =
     SendMessageToJavaScript
-        { tag = "ENCRYPT"
-        , data = Json.Encode.object [ ( "key", Json.Encode.int key ) ]
+        { tag = "DOWNLOAD_AND_DECRYPT"
+        , data =
+            Json.Encode.object
+                [ ( "key", Json.Encode.string key )
+                , ( "cid", Json.Encode.string cid )
+                ]
         }
 
 
@@ -129,6 +158,11 @@ logout =
 syncIn : { docs : Docs } -> Effect msg
 syncIn options =
     SendSharedMsg (Shared.Msg.SyncIn options)
+
+
+decryptedFileReceived : { fileValue : String } -> Effect msg
+decryptedFileReceived options =
+    SendSharedMsg (Shared.Msg.DecryptedFileReceived options)
 
 
 

@@ -18,3 +18,4 @@ type Msg
     = Login { accounts : List String }
     | Logout
     | SyncIn { docs : Shared.Model.Docs }
+    | DecryptedFileReceived { fileValue : String }

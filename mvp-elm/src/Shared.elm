@@ -99,6 +99,11 @@ update route msg model =
             , Effect.none
             )
 
+        Shared.Msg.DecryptedFileReceived { fileValue } ->
+            ( model
+            , Effect.none
+            )
+
 
 
 -- SUBSCRIPTIONS

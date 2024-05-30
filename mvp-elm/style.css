@@ -1,0 +1,10 @@
+@import "@picocss/pico";
+
+.link {
+    color: var(--primary);
+    cursor: pointer;
+}
+
+.link:hover {
+    text-decoration: underline;
+}

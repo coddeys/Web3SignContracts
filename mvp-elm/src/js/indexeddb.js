@@ -2,14 +2,10 @@ import { openDB } from 'idb';
 
 const dbPromise = openDB('web3signDB', 1, {
   upgrade(db) {
-    db.createObjectStore('docs', { autoIncrement: true });
+    db.createObjectStore('docs');
   },
 });
 
-export async function upload(data) {
-  return (await dbPromise).
-    put('docs', { name: data.name, file: data });
-}
 export async function get(key) {
   return (await dbPromise).get('docs', key);
 }

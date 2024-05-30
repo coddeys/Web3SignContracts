@@ -4,7 +4,7 @@
 * [x] Upload PDf to Lighthouse storage
 * [ ] We should have a list of wallet to which encrypt.
 * [ ] Sign PDF document
-* [ ] Encrypt the PDF document locally.
+* [x] Encrypt the PDF document locally.
 
 ## How to develop
 
@@ -28,6 +28,12 @@ npm run dev
 npm run build
 ```
 
+### Testing using local CloudFlare Pages
+
+```
+npm run build && npx wrangler pages dev dist/
+```
+
 ### Envirnoment variables
 
-It is necessary to set the "LIGHTHOUSE_API_KEY" environment variable in order to upload to Lighouse storage
+It is necessary to set the "VITE_LIGHTHOUSE_API_KEY" environment variable in order to upload to Lighouse storage
