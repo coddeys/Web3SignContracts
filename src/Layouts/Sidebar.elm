@@ -163,7 +163,8 @@ previewCmd file =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Effect.incoming Incoming
+    --    Effect.incoming Incoming
+    Sub.none
 
 
 

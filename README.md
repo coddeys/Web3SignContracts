@@ -37,3 +37,10 @@ npm run build && npx wrangler pages dev dist/
 ### Envirnoment variables
 
 It is necessary to set the "VITE_LIGHTHOUSE_API_KEY" environment variable in order to upload to Lighouse storage
+
+
+
+### Issues
+
+* [ ] Some of the PDFs larger than 1MB are not displaying properly in the preview modal window. 
+  The solution here: [Open base64 encoded pdf file using javascript. Issue with file size larger than 2 MB](https://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript)
