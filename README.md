@@ -1,16 +1,39 @@
-# Web3SignContracts
-> Built with [Elm Land](https://elm.land) 🌈
+* [x] Allow user to connect Filecoin (Metamask on Filecoin/IPFS network) wallet
+* [x] Load the PDF document into SPA (local storage)
+* [x] Retrive docs
+* [x] Upload PDf to Lighthouse storage
+* [ ] We should have a list of wallet to which encrypt.
+* [ ] Sign PDF document
+* [x] Encrypt the PDF document locally.
 
-## Local development
+## How to develop
 
-```bash
-# Requires Node.js v18+ (https://nodejs.org)
-npx elm-land server
+### Installation
+
+To get started, we'll need to install the latest version of Elm Land from NPM.
+
+```
+npm i
 ```
 
-## Deploying to production
+### Run the development server
 
-Elm Land projects are most commonly deployed as static websites. 
+```
+npm run dev
+```
 
-Please visit [the "Deployment" guide](https://elm.land/guide/deploying) to learn more
-about deploying your app for free using Netlify or Vercel.
+### Building the app
+
+```
+npm run build
+```
+
+### Testing using local CloudFlare Pages
+
+```
+npm run build && npx wrangler pages dev dist/
+```
+
+### Envirnoment variables
+
+It is necessary to set the "VITE_LIGHTHOUSE_API_KEY" environment variable in order to upload to Lighouse storage

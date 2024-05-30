@@ -4,7 +4,7 @@
       "development": { "debugger": true },
       "production": { "debugger": false }
     },
-    "env": [],
+    "env": ["LIGHTHOUSE_API_KEY"],
     "html": {
       "attributes": {
         "html": { "lang": "en" },
@@ -16,12 +16,13 @@
         { "http-equiv": "X-UA-Compatible", "content": "IE=edge" },
         { "name": "viewport", "content": "width=device-width, initial-scale=1.0" }
       ],
-      "link": [],
+      "link": [
+        { "rel": "stylesheet", "href": "https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" }
+      ],
       "script": []
     },
     "router": {
       "useHashRouting": false
-    },
-    "proxy": null
+    }
   }
 }
