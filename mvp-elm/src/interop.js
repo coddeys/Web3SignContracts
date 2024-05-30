@@ -34,14 +34,14 @@ export const onReady = ({ app, env }) => {
           return;
         case "UPLOAD":
           upload(data);
-          sync(apiKey);
+          sync();
           return;
         case "SET":
           setData(apiKey, data);
           return;
         case "DEL":
           del(data.key);
-          sync(apiKey);
+          sync();
           return;
         case "SIGN_AND_UPLOAD":
           signAndUpload(apiKey, data);
@@ -52,8 +52,11 @@ export const onReady = ({ app, env }) => {
         case "DOWNLOAD_AND_DECRYPT":
           downloadAndDecrypt(data);
           return;
+        case "RETRIEVE":
+          retrieve(data);
+          return;
         case "SYNC":
-          sync(apiKey);
+          sync();
           return;
         default:
           console.warn(`Unhandled outgoing port: "${tag}"`);
@@ -94,7 +97,7 @@ export const onReady = ({ app, env }) => {
 
   async function setData(apiKey, data) {
     await updateDoc(data);
-    await sync(apiKey);
+    await sync();
   }
   async function updateDoc(data) {
     const key = data.key
@@ -124,16 +127,17 @@ export const onReady = ({ app, env }) => {
   async function signAndUpload(apiKey, data) {
     const key = data.key;
     const doc = await updateDoc(data);
+    const accounts = await getAccounts();
 
     try {
       // 1. Encrypt the file
-      let { encryptedFile } = await encryptFile(doc);
+      let { encryptedFile } = await encryptFile(accounts[0], doc);
       // 2. Upload to Lighthouse
       let lighthouseResponse = await uploadToLighthouse(apiKey, encryptedFile);
       // 3. Store the Lighthouse response in DB
       await set(key, { ...doc, lighthouse: lighthouseResponse.data });
 
-      await sync(apiKey);
+      await sync();
     } catch (e) {
       console.warn(e);
       alert(JSON.stringify(e));
@@ -160,6 +164,7 @@ export const onReady = ({ app, env }) => {
       let blob = new Blob([new Uint8Array(decryptedFile).buffer], { type: 'application/pdf' })
       let file = new File([blob], 'filename', { type: 'application/pdf' });
 
+      await sync();
       app.ports.incoming.send({
         tag: "DECRYPTED_FILE_RECEIVED",
         data:
@@ -176,14 +181,19 @@ export const onReady = ({ app, env }) => {
   }
 
 
-  async function sync(apiKey) {
+  async function retrieve(data) {
+    console.log(data);
+    await downloadAndDecrypt(data);
+  }
+
+  async function sync() {
     const docs = await getAll();
     const keys = await getAllKeys();
     const dbDocs = (docs.map((x, i) => ({ key: (keys[i]), doc: x })));
 
     app.ports.incoming.send({
       tag: "GOT_DOCS",
-      data: { docs: dbDocs }, 
+      data: { docs: dbDocs },
     });
   }
 };

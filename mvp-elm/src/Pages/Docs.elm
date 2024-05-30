@@ -68,6 +68,7 @@ type alias Model =
 
 type SigningStep
     = AddRecipient RecipientAttrs
+    | ReceiveDoc String
 
 
 type alias RecipientAttrs =
@@ -83,6 +84,9 @@ updatePreviewAddress str pr =
     case pr of
         AddRecipient step ->
             AddRecipient { step | address = Address.fromString str }
+
+        ReceiveDoc string ->
+            ReceiveDoc string
 
 
 type Column
@@ -179,6 +183,9 @@ type Msg
     | SetSorted ( Column, Bool )
     | SetSelected String
     | UploadedToIPFSClicked (Set String)
+    | ReceiveClicked
+    | ReceiveDocCIDChanged String
+    | RetrieveClicked String
 
 
 update : Docs -> Msg -> Model -> ( Model, Effect Msg )
@@ -290,6 +297,21 @@ update docs msg model =
             , Effect.none
             )
 
+        ReceiveClicked ->
+            ( { model | step = Just <| ReceiveDoc "" }
+            , Effect.none
+            )
+
+        ReceiveDocCIDChanged str ->
+            ( { model | step = Just <| ReceiveDoc str }
+            , Effect.none
+            )
+
+        RetrieveClicked str ->
+            ( { model | step = Nothing }
+            , Effect.retrieve (docsKey docs) str
+            )
+
 
 storeAddressEff : String -> Address -> Effect Msg
 storeAddressEff key address =
@@ -392,8 +414,7 @@ actionButtons : List ( String, Doc ) -> List (Html Msg)
 actionButtons docs =
     case docs of
         [] ->
-            actionButtonsInactive
-                ++ viewAdd
+            actionNoneSelectedButtonsInactive
 
         [ ( key, Doc.Prepared file ) ] ->
             actionPreparedButtonsDoc key file
@@ -412,7 +433,6 @@ actionButtons docs =
 
         _ ->
             actionButtonsInactive
-                ++ viewAdd
 
 
 viewAdd : List (Html Msg)
@@ -426,7 +446,7 @@ viewAdd =
 
 actionButtonsInactive : List (Html msg)
 actionButtonsInactive =
-    [ "Upload", "Cancel", "View" ]
+    [ "Cancel", "View", "Sign&Upload" ]
         |> List.map outlineButtonDisabled
 
 
@@ -447,6 +467,16 @@ outlineButtonDoc { label, msg } =
     button
         [ class "outline", onClick msg ]
         [ text label ]
+
+
+actionNoneSelectedButtonsInactive : List (Html Msg)
+actionNoneSelectedButtonsInactive =
+    [ outlineButtonDoc
+        { label = "Receive"
+        , msg = ReceiveClicked
+        }
+    ]
+        ++ viewAdd
 
 
 actionPreparedButtonsDoc : String -> File -> List (Html Msg)
@@ -602,6 +632,48 @@ viewStep step =
         AddRecipient attrs ->
             viewStepAddRecipient attrs
 
+        ReceiveDoc cid ->
+            viewStepReceiveDoc cid
+
+
+viewStepReceiveDoc : String -> Html Msg
+viewStepReceiveDoc cid =
+    node "dialog"
+        [ attribute "open" "" ]
+        [ article []
+            [ header []
+                [ div []
+                    [ span
+                        [ class "close"
+                        , attribute "arith-label" "Close"
+                        , onClick <| PreviewClosed
+                        ]
+                        []
+                    , h3 [] [ text "Receive Documents" ]
+                    ]
+                ]
+            , div []
+                [ label [] [ text "Document IPFS CID" ]
+                , input
+                    [ type_ "input"
+                    , onInput ReceiveDocCIDChanged
+                    , placeholder "Content Identifier (CID)"
+                    ]
+                    []
+                , small [] [ text "Please enter a valid content identifiers (CID)" ]
+                ]
+            , button
+                [ case String.isEmpty cid of
+                    False ->
+                        onClick <| RetrieveClicked cid
+
+                    True ->
+                        disabled True
+                ]
+                [ text "Retrieve" ]
+            ]
+        ]
+
 
 viewStepAddRecipient : RecipientAttrs -> Html Msg
 viewStepAddRecipient attrs =
@@ -739,38 +811,17 @@ viewRow selected ( key, doc ) =
                         [ span [ class "link" ] [ text <| Doc.name doc ] ]
 
                 Uploaded attrs ->
-                    strong
-                        []
-                        [ span
-                            [ class "link"
-                            , onClick <| DecryptAndViewClicked key (LighthouseUpload.cid attrs.upload)
-                            ]
-                            [ attrs.file
-                                |> Maybe.map .name
-                                |> Maybe.withDefault (LighthouseUpload.name attrs.upload)
-                                |> text
-                            ]
-                        ]
+                    attrs.file
+                        |> Maybe.map .name
+                        |> Maybe.withDefault (LighthouseUpload.name attrs.upload)
+                        |> viewNameWithCID key (LighthouseUpload.cid attrs.upload)
 
                 Lighthouse lighthouse ->
-                    strong
-                        []
-                        [ span
-                            [ class "link"
-                            , onClick <| DecryptAndViewClicked key (Lighthouse.cid lighthouse)
-                            ]
-                            [ text <| Lighthouse.fileName lighthouse ]
-                        ]
+                    Lighthouse.fileName lighthouse
+                        |> viewNameWithCID key (Lighthouse.cid lighthouse)
 
                 Lit attrs ->
-                    strong
-                        []
-                        [ span
-                            [ class "link"
-                            , onClick <| DecryptAndViewClicked key attrs.metadata.cid
-                            ]
-                            [ text <| attrs.metadata.name ]
-                        ]
+                    viewNameWithCID key attrs.metadata.cid attrs.metadata.name
             ]
         , td [] [ viewAddresses doc ]
         , td [] [ viewUploadToIPFS doc ]
@@ -784,6 +835,31 @@ viewRow selected ( key, doc ) =
                 ]
             ]
         , td [] [ text (Doc.step doc) ]
+        ]
+
+
+viewNameWithCID key cid name =
+    div
+        [ style "display" "flex"
+        , style "flex-direction" "column"
+        ]
+        [ strong
+            [ class "link"
+            , onClick <| DecryptAndViewClicked key cid
+            ]
+            [ text name ]
+        , div
+            [ style "display" "flex"
+            , style "gap" "8px"
+            , style "font-size" "10px"
+            , style "align-items" "center"
+            ]
+            [ span []
+                [ text "CID:" ]
+            , small
+                []
+                [ text cid ]
+            ]
         ]
 
 

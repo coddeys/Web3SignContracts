@@ -4,7 +4,7 @@ port module Effect exposing
     , sendCmd, sendMsg
     , pushRoute, replaceRoute, loadExternalUrl
     , map, toCmd
-    , connectClicked, del, downloadAndDecryptIPFS, incoming, login, logout, set, sign, signAndUpload, syncIn, syncOut, upload, uploadToIPFS
+    , connectClicked, del, downloadAndDecryptIPFS, incoming, login, logout, retrieve, set, sign, signAndUpload, syncIn, syncOut, upload, uploadToIPFS
     )
 
 {-|
@@ -133,6 +133,18 @@ downloadAndDecryptIPFS : String -> String -> Effect msg
 downloadAndDecryptIPFS key cid =
     SendMessageToJavaScript
         { tag = "DOWNLOAD_AND_DECRYPT"
+        , data =
+            Json.Encode.object
+                [ ( "key", Json.Encode.string key )
+                , ( "cid", Json.Encode.string cid )
+                ]
+        }
+
+
+retrieve : String -> String -> Effect msg
+retrieve key cid =
+    SendMessageToJavaScript
+        { tag = "RETRIEVE"
         , data =
             Json.Encode.object
                 [ ( "key", Json.Encode.string key )

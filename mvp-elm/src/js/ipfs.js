@@ -1,20 +1,36 @@
 import lighthouse from "@lighthouse-web3/sdk";
 import * as LitJsSdk from "@lit-protocol/lit-node-client";
 
-export async function encryptFile(doc) {
-  const chain = "goerli";
-  // TODO: add doc.address to accessControlConditions  
+export async function encryptFile(address, doc) {
+  const chain = "filecoin";
+
   const accessControlConditions = [
     {
-      contractAddress: "",
-      standardContractType: "",
-      chain: "goerli",
-      method: "eth_getBalance",
-      parameters: [":userAddress", "latest"],
+      contractAddress: '',
+      standardContractType: '',
+      chain,
+      method: '',
+      parameters: [
+        ':userAddress',
+      ],
       returnValueTest: {
-        comparator: ">=",
-        value: "1000000000000", // 0.000001 ETH
-      },
+        comparator: '=',
+        value: doc.address
+      }
+    },
+    { operator: "or" },
+    {
+      contractAddress: '',
+      standardContractType: '',
+      chain,
+      method: '',
+      parameters: [
+        ':userAddress',
+      ],
+      returnValueTest: {
+        comparator: '=',
+        value: address
+      }
     },
   ];
 
@@ -46,7 +62,7 @@ export async function getLighthouseUploads(apiKey, account) {
 export async function getLighthouseUpload(ipfsCid) {
   const file = await getFile(ipfsCid);
 
-  const chain = "goerli";
+  const chain = "filecoin";
   const authSig = await LitJsSdk.checkAndSignAuthMessage({ chain });
 
   const decryptedFile = await LitJsSdk.decryptZipFileWithMetadata({
@@ -54,7 +70,7 @@ export async function getLighthouseUpload(ipfsCid) {
     file: file,
     authSig
   });
-  
+
   return decryptedFile;
 }
 
@@ -76,7 +92,7 @@ ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
   const reader = this.getReader()
   try {
     while (true) {
-      const {done, value} = await reader.read()
+      const { done, value } = await reader.read()
       if (done) return
       yield value
     }
