@@ -102,8 +102,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    --   Effect.incoming Incoming
-    Sub.none
+    Effect.incoming Incoming
 
 
 

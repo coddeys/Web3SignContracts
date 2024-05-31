@@ -1,4 +1,6 @@
 import { StandardFonts, rgb, degrees, PDFDocument } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
+
 import { getAll, getAllKeys, del, get, set } from "./js/indexeddb.js";
 import { requestAccounts, getAccounts } from "./js/metamask.js"
 import { encryptFile, uploadToLighthouse, getLighthouseUploads, getLighthouseUpload } from "./js/ipfs.js"
@@ -107,9 +109,11 @@ export const onReady = ({ app, env }) => {
   }
 
   async function setData(apiKey, data) {
+    await signatureMergePdf(data)
     await updateDoc(data);
     await sync();
   }
+
   async function updateDoc(data) {
     const key = data.key
     let doc = await get(key);
@@ -219,7 +223,11 @@ export const onReady = ({ app, env }) => {
     );
 
     // Embed the Helvetica font
-    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const url = 'https://themes.googleusercontent.com/static/fonts/greatvibes/v1/6q1c0ofG6NKsEhAc2eh-3Z0EAVxt0G0biEntp43Qt6E.ttf'
+    const fontBytes = await fetch(url).then((res) => res.arrayBuffer())
+    pdfDoc.registerFontkit(fontkit)
+    const greatVibe = await pdfDoc.embedFont(fontBytes)
+    console.log(greatVibe)
 
     // Get the first page of the document
     const pages = pdfDoc.getPages()
@@ -229,9 +237,10 @@ export const onReady = ({ app, env }) => {
     const { width, height } = firstPage.getSize()
 
     firstPage.drawText(data.signName, {
-      x: 5,
-      y: height / 2 + 300,
-      size: 50,
+      x: 20,
+      y: 20,
+      font: greatVibe,
+      size: 24,
       color: rgb(0.95, 0.1, 0.1),
     })
 

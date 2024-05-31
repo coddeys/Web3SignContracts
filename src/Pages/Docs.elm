@@ -191,7 +191,7 @@ type Msg
     | PreparedViewClicked String File
     | PreviewAddressesChanged String
     | PreviewSignNameChanged String
-    | SaveAsDraftClicked String Address
+    | SaveAsDraftClicked String Address String
     | SignAndUploadClicked String Address String
     | AddressesActionClicked String File Address
     | DecryptAndViewClicked String String
@@ -253,12 +253,12 @@ update docs msg model =
             , Effect.none
             )
 
-        SaveAsDraftClicked key address ->
+        SaveAsDraftClicked key address signName ->
             ( { model
                 | step = Nothing
                 , selected = Set.empty
               }
-            , storeAddressEff key address
+            , storeAddressEff key address signName
             )
 
         SignAndUploadClicked key address signName ->
@@ -339,10 +339,11 @@ update docs msg model =
             )
 
 
-storeAddressEff : String -> Address -> Effect Msg
-storeAddressEff key address =
+storeAddressEff : String -> Address -> String -> Effect Msg
+storeAddressEff key address signName =
     [ ( "key", Json.Encode.string key )
     , ( "address", Address.encode address )
+    , ( "signName", Json.Encode.string signName )
     ]
         |> Json.Encode.object
         |> Effect.set
@@ -756,7 +757,7 @@ viewDialog { file, data, signName, address, key } =
                             [ class "outline"
                             , case isEmpty of
                                 False ->
-                                    onClick <| SaveAsDraftClicked key address
+                                    onClick <| SaveAsDraftClicked key address signName
 
                                 True ->
                                     disabled True
@@ -832,7 +833,7 @@ canvas : String -> List Canvas.Renderable
 canvas str =
     [ Canvas.shapes [ Canvas.Settings.Advanced.alpha 0.99, Canvas.Settings.fill Color.white ] [ Canvas.rect ( 0, 0 ) 200 100 ]
     , Canvas.text
-        [ Text.font { size = 24, family = "Great Vibes" }, Text.align Text.Center ]
+        [ Text.font { size = 24, family = "Great Vibes" }, Text.align Text.Center, Canvas.Settings.fill Color.red ]
         ( 100, 55 )
         str
     ]
