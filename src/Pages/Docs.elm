@@ -78,7 +78,7 @@ type SigningStep
 
 type alias RecipientAttrs =
     { address : Address
-    , name : String
+    , file : File
     , signName : String
     , key : String
     , data : String
@@ -192,7 +192,7 @@ type Msg
     | PreviewAddressesChanged String
     | PreviewSignNameChanged String
     | SaveAsDraftClicked String Address
-    | SignAndUploadClicked String Address
+    | SignAndUploadClicked String Address String
     | AddressesActionClicked String File Address
     | DecryptAndViewClicked String String
     | PreviewClosed
@@ -261,12 +261,12 @@ update docs msg model =
             , storeAddressEff key address
             )
 
-        SignAndUploadClicked key address ->
+        SignAndUploadClicked key address signName ->
             ( { model
                 | step = Nothing
                 , selected = Set.empty
               }
-            , Effect.signAndUpload key address
+            , Effect.signAndUpload key address signName
             )
 
         AddressesActionClicked key file address ->
@@ -356,7 +356,7 @@ movedToAddRecipientEff key file address =
                 |> Maybe.withDefault (Address.fromString "")
 
         toRecipientAttrs =
-            RecipientAttrs addr file.name "" key
+            RecipientAttrs addr file "" key
     in
     file.value
         |> Json.Decode.decodeValue File.decoder
@@ -645,7 +645,7 @@ viewThSorted sel col =
 
 
 type alias DialogConfig =
-    { name : String
+    { file : File
     , address : Address
     , signName : String
     , key : String
@@ -705,7 +705,7 @@ viewStepReceiveDoc cid =
 viewStepAddRecipient : RecipientAttrs -> Html Msg
 viewStepAddRecipient attrs =
     viewDialog
-        { name = attrs.name
+        { file = attrs.file
         , data = attrs.data
         , signName = attrs.signName
         , key = attrs.key
@@ -714,7 +714,7 @@ viewStepAddRecipient attrs =
 
 
 viewDialog : DialogConfig -> Html Msg
-viewDialog { name, data, signName, address, key } =
+viewDialog { file, data, signName, address, key } =
     let
         isEmpty =
             String.isEmpty <| Address.string address
@@ -737,7 +737,7 @@ viewDialog { name, data, signName, address, key } =
                             , onClick <| PreviewClosed
                             ]
                             []
-                        , h3 [] [ text name ]
+                        , h3 [] [ text file.name ]
                         ]
                     , viewPreviewAddresses signName address
                     , div
@@ -767,7 +767,7 @@ viewDialog { name, data, signName, address, key } =
                             [ button
                                 [ case isEmpty of
                                     False ->
-                                        onClick <| SignAndUploadClicked key address
+                                        onClick <| SignAndUploadClicked key address signName
 
                                     True ->
                                         disabled True

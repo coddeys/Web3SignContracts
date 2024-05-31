@@ -1,3 +1,4 @@
+import { StandardFonts, rgb, degrees, PDFDocument } from 'pdf-lib'
 import { getAll, getAllKeys, del, get, set } from "./js/indexeddb.js";
 import { requestAccounts, getAccounts } from "./js/metamask.js"
 import { encryptFile, uploadToLighthouse, getLighthouseUploads, getLighthouseUpload } from "./js/ipfs.js"
@@ -13,6 +14,16 @@ export const flags = ({ env }) => {
 
 function sleep(time) {
   return new Promise((resolve) => setTimeout(resolve, time));
+}
+
+async function readAsArrayBuffer(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = () => {
+      res(reader.result);
+    };
+  });
 }
 
 // This is called AFTER your Elm app starts up
@@ -126,8 +137,10 @@ export const onReady = ({ app, env }) => {
 
   async function signAndUpload(apiKey, data) {
     const key = data.key;
-    const doc = await updateDoc(data);
     const accounts = await getAccounts();
+    await signatureMergePdf(data)
+    await sync();
+    const doc = await updateDoc(data);
 
     try {
       // 1. Encrypt the file
@@ -195,5 +208,36 @@ export const onReady = ({ app, env }) => {
       tag: "GOT_DOCS",
       data: { docs: dbDocs },
     });
+  }
+
+  async function signatureMergePdf(data) {
+    let doc = await get(data.key);
+
+    // Load a PDFDocument from the existing PDF bytes
+    const pdfDoc = await PDFDocument.load(
+      await readAsArrayBuffer(doc.file)
+    );
+
+    // Embed the Helvetica font
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+    // Get the first page of the document
+    const pages = pdfDoc.getPages()
+    const firstPage = pages[0]
+
+    // Get the width and height of the first page
+    const { width, height } = firstPage.getSize()
+
+    firstPage.drawText(data.signName, {
+      x: 5,
+      y: height / 2 + 300,
+      size: 50,
+      color: rgb(0.95, 0.1, 0.1),
+    })
+
+    // Serialize the PDFDocument to bytes (a Uint8Array)
+    const pdfBytes = await pdfDoc.save()
+    const file = new File([pdfBytes], doc.file.name, { type: 'application/pdf' });
+    await set(data.key, { file: file });
   }
 };

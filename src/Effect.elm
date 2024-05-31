@@ -109,14 +109,15 @@ set obj =
         }
 
 
-signAndUpload : String -> MetaMask.Address -> Effect msg
-signAndUpload key address =
+signAndUpload : String -> MetaMask.Address -> String -> Effect msg
+signAndUpload key address signName =
     SendMessageToJavaScript
         { tag = "SIGN_AND_UPLOAD"
         , data =
             Json.Encode.object
                 [ ( "key", Json.Encode.string key )
                 , ( "address", MetaMask.encode address )
+                , ( "signName", Json.Encode.string signName )
                 ]
         }
 
