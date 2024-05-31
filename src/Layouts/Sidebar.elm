@@ -163,8 +163,7 @@ previewCmd file =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    --    Effect.incoming Incoming
-    Sub.none
+    Effect.incoming Incoming
 
 
 
@@ -219,6 +218,7 @@ viewConnect fromMsg =
     li [] [ div [ attribute "role" "button", onClick (fromMsg ConnectClicked) ] [ text "Connect" ] ]
 
 
+viewNotConnected : Html msg
 viewNotConnected =
     div [ class "container" ]
         [ text "Please connect your wallet" ]

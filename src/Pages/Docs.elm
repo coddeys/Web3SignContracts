@@ -2,6 +2,11 @@ module Pages.Docs exposing (Model, Msg, page)
 
 import Auth
 import Bytes exposing (Bytes)
+import Canvas
+import Canvas.Settings
+import Canvas.Settings.Advanced
+import Canvas.Settings.Text as Text
+import Color
 import Data.Doc as Doc exposing (Doc(..), addresses)
 import Data.EncryptionKey as EncryptionKey exposing (EncryptionKey)
 import Data.Lighthouse as Lighthouse
@@ -74,6 +79,7 @@ type SigningStep
 type alias RecipientAttrs =
     { address : Address
     , name : String
+    , signName : String
     , key : String
     , data : String
     }
@@ -84,6 +90,16 @@ updatePreviewAddress str pr =
     case pr of
         AddRecipient step ->
             AddRecipient { step | address = Address.fromString str }
+
+        ReceiveDoc string ->
+            ReceiveDoc string
+
+
+updatePreviewSignName : String -> SigningStep -> SigningStep
+updatePreviewSignName str pr =
+    case pr of
+        AddRecipient step ->
+            AddRecipient { step | signName = str }
 
         ReceiveDoc string ->
             ReceiveDoc string
@@ -174,6 +190,7 @@ type Msg
     | AddRecipientTriggered RecipientAttrs
     | PreparedViewClicked String File
     | PreviewAddressesChanged String
+    | PreviewSignNameChanged String
     | SaveAsDraftClicked String Address
     | SignAndUploadClicked String Address
     | AddressesActionClicked String File Address
@@ -223,6 +240,15 @@ update docs msg model =
                 | step =
                     model.step
                         |> Maybe.map (updatePreviewAddress str)
+              }
+            , Effect.none
+            )
+
+        PreviewSignNameChanged str ->
+            ( { model
+                | step =
+                    model.step
+                        |> Maybe.map (updatePreviewSignName str)
               }
             , Effect.none
             )
@@ -330,7 +356,7 @@ movedToAddRecipientEff key file address =
                 |> Maybe.withDefault (Address.fromString "")
 
         toRecipientAttrs =
-            RecipientAttrs addr file.name key
+            RecipientAttrs addr file.name "" key
     in
     file.value
         |> Json.Decode.decodeValue File.decoder
@@ -621,6 +647,7 @@ viewThSorted sel col =
 type alias DialogConfig =
     { name : String
     , address : Address
+    , signName : String
     , key : String
     , data : String
     }
@@ -680,13 +707,14 @@ viewStepAddRecipient attrs =
     viewDialog
         { name = attrs.name
         , data = attrs.data
+        , signName = attrs.signName
         , key = attrs.key
         , address = attrs.address
         }
 
 
 viewDialog : DialogConfig -> Html Msg
-viewDialog { name, data, address, key } =
+viewDialog { name, data, signName, address, key } =
     let
         isEmpty =
             String.isEmpty <| Address.string address
@@ -697,9 +725,9 @@ viewDialog { name, data, address, key } =
             [ article
                 [ style "max-width" "90%"
                 , style "width" "90%"
-                , style "max-height" "90%"
+                , style "max-height" "100%"
                 , style "height" "100%"
-                , style "overflow" "hidden"
+                , style "overflow" "auto"
                 ]
                 [ header []
                     [ div []
@@ -711,7 +739,7 @@ viewDialog { name, data, address, key } =
                             []
                         , h3 [] [ text name ]
                         ]
-                    , viewPreviewAddresses address
+                    , viewPreviewAddresses signName address
                     , div
                         [ class "grid"
                         , style "grid-template-columns" "25% 25%"
@@ -765,10 +793,10 @@ viewDialog { name, data, address, key } =
         ]
 
 
-viewPreviewAddresses : Address -> Html Msg
-viewPreviewAddresses address =
+viewPreviewAddresses : String -> Address -> Html Msg
+viewPreviewAddresses signName address =
     details [ attribute "open" "" ]
-        [ summary [] [ text "Addresses *" ]
+        [ summary [] [ text "Address *" ]
         , input
             [ type_ "input"
             , onInput PreviewAddressesChanged
@@ -779,7 +807,35 @@ viewPreviewAddresses address =
             ]
             []
         , small [] [ text "Enter the public address of the MetaMask wallet." ]
+        , viewSignPDF signName
         ]
+
+
+viewSignPDF : String -> Html Msg
+viewSignPDF signName =
+    div [ class "container" ]
+        [ label [] [ text "Add Signature" ]
+        , input
+            [ type_ "input"
+            , onInput PreviewSignNameChanged
+            , value signName
+            , placeholder "Type your name here"
+            ]
+            []
+        , Canvas.toHtmlWith { width = 200, height = 100, textures = [] }
+            [ style "display" "block" ]
+            (canvas signName)
+        ]
+
+
+canvas : String -> List Canvas.Renderable
+canvas str =
+    [ Canvas.shapes [ Canvas.Settings.Advanced.alpha 0.99, Canvas.Settings.fill Color.white ] [ Canvas.rect ( 0, 0 ) 200 100 ]
+    , Canvas.text
+        [ Text.font { size = 24, family = "Great Vibes" }, Text.align Text.Center ]
+        ( 100, 55 )
+        str
+    ]
 
 
 viewRow : Set String -> ( String, Doc ) -> Html Msg
