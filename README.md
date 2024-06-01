@@ -1,16 +1,25 @@
-* [x] Allow user to connect Filecoin (Metamask on Filecoin/IPFS network) wallet
-* [x] Load the PDF document into SPA (local storage)
-* [x] Retrive docs
-* [x] Upload PDf to Lighthouse storage
-* [ ] We should have a list of wallet to which encrypt.
-* [ ] Sign PDF document
-* [x] Encrypt the PDF document locally.
+## How It Works
+
+Step 1: Connect your MetaMask wallet to the browser.
+
+Step 2: Upload the PDF document to the browser's client-storage, IndexedDB.
+
+Step 3: Sign the PDF document with your name.
+
+Step 4: Input the MetaMask address of the other party involved.
+
+Step 5: Use the Lit JS SDK to encrypt the document for secure sharing.
+
+Step 6: Upload the encrypted document to IPFS using the Lighthouse JS SDK.
+
+Step 7: Share the Content Identifier (CID) of the uploaded document with the other party.
+
+Step 8: The other party repeats the process from Step 1 and shares the CID of the newly uploaded document with you.
+
 
 ## How to develop
 
 ### Installation
-
-To get started, we'll need to install the latest version of Elm Land from NPM.
 
 ```
 npm i
@@ -28,16 +37,9 @@ npm run dev
 npm run build
 ```
 
-### Testing using local CloudFlare Pages
-
-```
-npm run build && npx wrangler pages dev dist/
-```
-
 ### Envirnoment variables
 
 It is necessary to set the "VITE_LIGHTHOUSE_API_KEY" environment variable in order to upload to Lighouse storage
-
 
 
 ### Issues
