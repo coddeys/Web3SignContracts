@@ -77,6 +77,6 @@ view model =
     { title = "Pages.Home_"
     , body =
         [ h1 [] [ text "Sign and Store" ]
-        , p [] [ text "Web3Sign lets you store and sign documents in a totally decentralized way. Documents are stored on IPFS storage. Signatures are stored on the blockchain. There is no centralized service provider. You can specify signers of your document, and they will be notified about the need to sign. You will be notified as soon as the document gets signed by everyone." ]
+        , p [] [ text "Web3Sign offers a fully decentralized platform for storing and signing documents, leveraging the InterPlanetary File System (IPFS) for document storage and blockchain technology for signature recording. This approach eliminates the need for centralized service providers, enhancing security and resilience against tampering and data loss. Users can designate signers, who are then notified to sign the document via decentralized notification systems. Once all parties have signed, notifications are sent out to confirm completion, ensuring transparency and integrity in the document signing process. This method is particularly valuable in scenarios where document security and verification are critical."]
         ]
     }
