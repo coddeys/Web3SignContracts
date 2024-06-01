@@ -1,3 +1,5 @@
+
+
 ## How It Works
 
 Step 1: Connect your MetaMask wallet to the browser.
@@ -15,6 +17,9 @@ Step 6: Upload the encrypted document to IPFS using the Lighthouse JS SDK.
 Step 7: Share the Content Identifier (CID) of the uploaded document with the other party.
 
 Step 8: The other party repeats the process from Step 1 and shares the CID of the newly uploaded document with you.
+
+[HackFS 2024](https://ethglobal.com/events/hackfs2024)
+
 
 
 ## How to develop
